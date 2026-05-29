@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "website_bucket" {
-  bucket = "alina-aws-cloud-project-bucket"
+  bucket = var.bucket_name
 }
 
 resource "aws_s3_object" "index_html" {
