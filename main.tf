@@ -207,10 +207,10 @@ resource "aws_security_group" "ec2_sg" {
 
   # Nur Traffic vom ALB erlauben
   ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -278,21 +278,24 @@ resource "aws_lb_listener" "http_listener" {
 # EC2 und Launch Template
 resource "aws_launch_template" "project_lt" {
   name_prefix   = "project-lt-"
-  image_id      = "ami-0a628e1e89aaedf80"
-  instance_type = "t3.micro" # Free Tier
+  image_id      = "ami-0f1834be8d049e69f"
+  instance_type = "t3.micro"
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile.name
+  }
 
   network_interfaces {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.ec2_sg.id]
   }
 
-  # Auto-install Webserver
   user_data = base64encode(<<-EOF
     #!/bin/bash
-    yum update -y
-    yum install -y httpd
-    systemctl start httpd
+    dnf update -y
+    dnf install -y httpd
     systemctl enable httpd
+    systemctl start httpd
     echo "<h1>Hello from EC2 - $(hostname)</h1>" > /var/www/html/index.html
   EOF
   )
@@ -319,9 +322,83 @@ resource "aws_autoscaling_group" "project_asg" {
     version = "$Latest"
   }
 
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
+
   tag {
     key                 = "Name"
     value               = "project-ec2"
     propagate_at_launch = true
   }
+}
+
+# IAM Rolle für EC2 Instanzen
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2-project-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "ec2-project-role"
+  }
+}
+
+# IAM Policy
+resource "aws_iam_role_policy" "ec2_secrets_policy" {
+  name = "ec2-secrets-policy"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+# IAM Instanz-Profil
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ec2-project-profile"
+  role = aws_iam_role.ec2_role.name
+
+  tags = {
+    Name = "ec2-project-profile"
+  }
+}
+
+# Secrets Manager
+resource "aws_secretsmanager_secret" "project_secret" {
+  name        = "project/app-secret"
+  description = "Application secrets for the project"
+
+  tags = {
+    Name = "project-app-secret"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "project_secret_value" {
+  secret_id = aws_secretsmanager_secret.project_secret.id
+
+  secret_string = jsonencode({
+    app_env = "production"
+    app_key = "placeholder-key-replace-in-production"
+  })
 }
