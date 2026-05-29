@@ -2,6 +2,16 @@ resource "aws_s3_bucket" "website_bucket" {
   bucket = var.bucket_name
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 resource "aws_s3_object" "index_html" {
   bucket       = aws_s3_bucket.website_bucket.id
   key          = "index.html"
@@ -63,11 +73,15 @@ resource "aws_s3_bucket_policy" "allow_cloudfront_access" {
       {
         Sid    = "AllowCloudFrontServicePrincipalReadOnly"
         Effect = "Allow"
+
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
-        Action   = "s3:GetObject"
+
+        Action = "s3:GetObject"
+
         Resource = "${aws_s3_bucket.website_bucket.arn}/*"
+
         Condition = {
           StringEquals = {
             "AWS:SourceArn" = aws_cloudfront_distribution.website_cdn.arn
@@ -77,3 +91,4 @@ resource "aws_s3_bucket_policy" "allow_cloudfront_access" {
     ]
   })
 }
+
