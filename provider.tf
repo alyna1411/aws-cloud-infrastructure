@@ -1,3 +1,4 @@
+# Definition AWS Provider
 terraform {
   required_providers {
     aws = {
@@ -7,6 +8,7 @@ terraform {
   }
 }
 
+# Zielregion
 provider "aws" {
   region = var.aws_region
 }
