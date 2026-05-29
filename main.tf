@@ -274,3 +274,54 @@ resource "aws_lb_listener" "http_listener" {
     target_group_arn = aws_lb_target_group.project_tg.arn
   }
 }
+
+# EC2 und Launch Template
+resource "aws_launch_template" "project_lt" {
+  name_prefix   = "project-lt-"
+  image_id      = "ami-0a628e1e89aaedf80"
+  instance_type = "t3.micro" # Free Tier
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.ec2_sg.id]
+  }
+
+  # Auto-install Webserver
+  user_data = base64encode(<<-EOF
+    #!/bin/bash
+    yum update -y
+    yum install -y httpd
+    systemctl start httpd
+    systemctl enable httpd
+    echo "<h1>Hello from EC2 - $(hostname)</h1>" > /var/www/html/index.html
+  EOF
+  )
+
+  tags = {
+    Name = "project-launch-template"
+  }
+}
+
+# Auto Scaling Group (ASG)
+resource "aws_autoscaling_group" "project_asg" {
+  name              = "project-asg"
+  desired_capacity  = 2
+  min_size          = 1
+  max_size          = 3
+  target_group_arns = [aws_lb_target_group.project_tg.arn]
+  vpc_zone_identifier = [
+    aws_subnet.public_subnet_a.id,
+    aws_subnet.public_subnet_b.id
+  ]
+
+  launch_template {
+    id      = aws_launch_template.project_lt.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "project-ec2"
+    propagate_at_launch = true
+  }
+}
