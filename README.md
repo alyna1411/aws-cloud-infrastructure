@@ -84,7 +84,9 @@ terraform apply
 ```
 
 **Infrastruktur löschen:**
+```
 terraform destroy
+```
 
 ## Projektstruktur
 ```
