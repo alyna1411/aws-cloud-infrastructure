@@ -2,7 +2,6 @@
 resource "aws_s3_bucket" "website_bucket" {
   bucket = var.bucket_name
 }
-
 # Verschlüsselte Datenspeicherung 
 resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
   bucket = aws_s3_bucket.website_bucket.id
@@ -13,7 +12,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption
     }
   }
 }
-
 # Upload der HTML-file in den S3 Bucket
 resource "aws_s3_object" "index_html" {
   bucket       = aws_s3_bucket.website_bucket.id
@@ -21,7 +19,6 @@ resource "aws_s3_object" "index_html" {
   source       = "${path.module}/website/index.html"
   content_type = "text/html"
 }
-
 # CloudFront Distribution und Zugriffskontrolle
 resource "aws_cloudfront_origin_access_control" "s3_oac" {
   name                              = "s3-oac-website"
@@ -30,7 +27,6 @@ resource "aws_cloudfront_origin_access_control" "s3_oac" {
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
-
 resource "aws_cloudfront_distribution" "website_cdn" {
   enabled             = true
   default_root_object = "index.html"
@@ -40,7 +36,6 @@ resource "aws_cloudfront_distribution" "website_cdn" {
     origin_id                = "s3-origin"
     origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
   }
-
   # HTTPS erzwingen und nur GET/HEAD erlauben
   default_cache_behavior {
     target_origin_id       = "s3-origin"
@@ -386,7 +381,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 
 # Secrets Manager
 resource "aws_secretsmanager_secret" "project_secret" {
-  name        = "project/app-secret"
+  name        = "project/app-secret-v2"
   description = "Application secrets for the project"
 
   tags = {
@@ -401,4 +396,26 @@ resource "aws_secretsmanager_secret_version" "project_secret_value" {
     app_env = "production"
     app_key = "placeholder-key-replace-in-production"
   })
+}
+
+# Route 53 Hosted Zone
+resource "aws_route53_zone" "project_zone" {
+  name = "alina-aws-cloud-project.internal"
+
+  tags = {
+    Name = "alina-aws-cloud-project-zone"
+  }
+}
+
+# zeigt auf ALB
+resource "aws_route53_record" "alb_record" {
+  zone_id = aws_route53_zone.project_zone.zone_id
+  name    = "www.alina-aws-cloud-project.internal"
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.project_alb.dns_name
+    zone_id                = aws_lb.project_alb.zone_id
+    evaluate_target_health = true
+  }
 }

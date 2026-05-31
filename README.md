@@ -67,7 +67,7 @@ Da dieses Projekt keine eigene Domain verwendet, wird ACM/Route 53 konzeptionell
 1. Domain in Route 53 registrieren
 2. ACM-Zertifikat für die Domain beantragen
 3. DNS-Validierung über Route 53 durchführen
-4. HTTPS-Listener (Port 443) am ALB mit ACM-Zertifikat konfigurieren
+4. ALB mit HTTPS (Port 443) und ACM-Zertifikat absichern
 5. CloudFront mit eigenem SSL-Zertifikat absichern
 
 ## Sicherheitshinweise
