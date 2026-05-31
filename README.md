@@ -82,17 +82,23 @@ Da dieses Projekt keine eigene Domain verwendet, wird ACM konzeptionell dokument
 ## Deployment mittels Terraform
 
 **Infrastruktur aufbauen:**
+```
 terraform init
 terraform plan
 terraform apply
+```
 
 **Infrastruktur löschen:**
+```
 terraform destroy
+```
 
 ## Projektstruktur
+```
 aws-cloud-infrastructure/
 ├── main.tf
 ├── variables.tf
 ├── provider.tf
 └── website/
     └── index.html
+```
