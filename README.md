@@ -1,4 +1,5 @@
 # Amazon Web Services (AWS) Cloud Infrastructure Projekt
+
 Im Rahmen dieses Projekts wird eine Cloud-Infrastruktur auf Amazon Web Services (AWS) aufgebaut und 
 mit Terraform automatisiert bereitgestellt.
 
@@ -11,6 +12,7 @@ mit Terraform automatisiert bereitgestellt.
 ![Architekturdiagramm](architektur.png)
 
 Infrastruktur-Bereiche:
+
 - **Statische Inhalte (CDN-Pfad):**
 User → Route 53 → CloudFront → S3 (privat)
 - **Dynamische Inhalte (ALB-Pfad):**
@@ -58,42 +60,39 @@ CloudFront → Application Load Balancer (ALB) → EC2-Instanzen (via Auto Scali
 - IAM-Rolle `ec2-project-role` für EC2-Instanzen
 - Beispiel-Secret in AWS Secrets Manager angelegt
 
-### ACM + Route 53
-ACM-Zertifikate erfordern eine eigene Domain zur DNS-Validierung.
-Da dieses Projekt keine eigene Domain verwendet, wird ACM/Route 53 konzeptionell dokumentiert:
+### Route 53 
+- Gehostete Zone `alina-aws-cloud-project.internal` erstellt
+- DNS-Eintrag `www.alina-aws-cloud-project.internal` zeigt auf ALB
 
-Umsetzung:
-1. Domain in Route 53 registrieren
-2. ACM-Zertifikat für die Domain beantragen
-3. DNS-Validierung über Route 53 durchführen
-4. ALB mit HTTPS (Port 443) und ACM-Zertifikat absichern
-5. CloudFront mit eigenem SSL-Zertifikat absichern
+### ACM 📄
+ACM-Zertifikate erfordern eine eigene Domain zur DNS-Validierung.
+Da dieses Projekt keine eigene Domain verwendet, wird ACM konzeptionell dokumentiert:
+
+1. ACM-Zertifikat für die Domain beantragen
+2. DNS-Validierung über Route 53 durchführen
+3. ALB mit HTTPS (Port 443) und ACM-Zertifikat absichern
+4. CloudFront mit eigenem SSL-Zertifikat absichern
 
 ## Sicherheitshinweise
-- Privater S3-Bucket (kein direkter öffentlicher Zugriff)
+- S3-Bucket ist privat — kein direkter öffentlicher Zugriff
 - EC2-Instanzen sind nur über den ALB erreichbar
 - Alle Daten im S3-Bucket sind serverseitig verschlüsselt (AES256)
 - IAM Least Privilege Prinzip angewendet
 
 ## Deployment mittels Terraform
+
 **Infrastruktur aufbauen:**
-```
 terraform init
 terraform plan
 terraform apply
-```
 
 **Infrastruktur löschen:**
-```
 terraform destroy
-```
 
 ## Projektstruktur
-```
 aws-cloud-infrastructure/
 ├── main.tf
 ├── variables.tf
 ├── provider.tf
 └── website/
     └── index.html
-```
